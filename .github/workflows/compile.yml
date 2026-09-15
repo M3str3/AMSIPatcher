@@ -1,0 +1,50 @@
+name: Compile
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: cargo build --release --verbose
+
+      - name: Run tests
+        run: cargo test --verbose
+
+      - name: Rename binary
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path "target/release" -Filter "*.exe" | Select-Object -First 1
+
+          if (-not $exe) {
+            Write-Error "No .exe binary found in target/release"
+            exit 1
+          }
+
+          Rename-Item $exe.FullName "amsipatcher.exe"
+
+      - name: Create latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest
+          prerelease: false
+          make_latest: true
+          files: |
+            target/release/amsipatcher.exe
+
